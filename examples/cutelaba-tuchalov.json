@@ -1,0 +1,9 @@
+{
+  "name": "FW_UFC-RIYAD_CUTELABA-vs-TUCHALOV",
+  "event": "UFC FIGHT NIGHT · RIYAD",
+  "date": "SAMEDI 5 DÉCEMBRE",
+  "division": "LIGHT HEAVYWEIGHT DIVISION · 93 KG",
+  "noRed": false,
+  "left":  { "last": "CUȚELABA", "rec": "20-12-1 (1 NC)", "sub": "9-11-1 UFC · 32 ANS" },
+  "right": { "last": "TUCHALOV", "rec": "7-0", "sub": "1-0 UFC · 26 ANS" }
+}

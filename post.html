@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>FW — post vidéo d'annonce</title>
+<link rel="stylesheet" href="node_modules/@fontsource/teko/500.css">
+<link rel="stylesheet" href="node_modules/@fontsource/teko/600.css">
+<link rel="stylesheet" href="node_modules/@fontsource/teko/700.css">
+<style>
+  html,body{margin:0;background:#000}
+  canvas{display:block;width:540px;height:960px}
+</style>
+</head>
+<body>
+<canvas id="cv" width="1080" height="1920"></canvas>
+<script>
+/* =================== CONFIG DU COMBAT =================== */
+window.POST = window.POST || {
+  event: 'UFC FIGHT NIGHT · RIYAD',            // événement + lieu, sous le logo FW
+  date: 'SAMEDI 5 DÉCEMBRE',
+  division: 'LIGHT HEAVYWEIGHT DIVISION · 93 KG',   // toujours en anglais, dans la barre dorée
+  noRed: false,                   // true = mode sans rouge (Ziam)
+  duration: 10,
+  left:  { last: 'CUȚELABA', rec: '20-12-1 (1 NC)', sub: '9-11-1 UFC · 32 ANS', img: 'work/left', x: -22.32, top: 400, w: 640 },
+  right: { last: 'TUCHALOV', rec: '7-0', sub: '1-0 UFC · 26 ANS', img: 'work/right', x: 477.68, top: 400, w: 640 },
+  // portraits : largeur dessinée, haut de l'image, centre des visages (x)
+};
+/* ======================================================== */
+
+const P = window.POST;
+const W = 1080, H = 1920;
+const BONE = '#EDEDE8', GOLD = '#FFC400', NAVY = '#06121f';
+const RED_RGB = P.noRed ? '138,151,168' : '230,48,38';
+const F = (w,s)=>`${w} ${s}px Teko`;
+const SVG_WORD = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 801 337.14"><g fill="#EDEDE8"><path d="M57.35,40.67V61.11H146V96.77H57.35V148.9H0V2.92H152V40.67Z"/><path d="M221.89,2.92v146H164.53V2.92Z"/><path d="M334.5,152c-49.43,0-100.1-17.52-100.1-76.12,0-58.39,48.79-75.91,97-75.91C376,0,415.2,15.64,424.17,51.72h-58.6c-5.42-7.93-14.6-14.39-34.2-14.39-26.9,0-39,14.39-39,38.58,0,24.4,16.68,38.79,42.75,38.79,22.73,0,31.91-10,34.62-16.89H327.2V62.15H427.51C432.51,125.13,393.1,152,334.5,152Z"/><path d="M620.61,2.92v146H563.26V96.56H498V148.9H440.64V2.92H498V55.06h65.27V2.92Z"/><path d="M801,40.67H745.73V148.9H688.39V40.67H633.12V2.92H801Z"/><path d="M266.07,188.62,217.48,337.14H155.31L133,255.24l-22.27,81.9H48.59L0,188.62H60.47l24.19,88.9,24.19-88.9h48.37l24.19,88.9,24.19-88.9Z"/><path d="M431.47,226.81H274.57V188.62h156.9Zm0,53.26H274.57V243.78h156.9Zm-.1,18.88v38.19H274.57V299Z"/><path d="M602.59,226.81H446.23V188.62H602.59Zm0,53.26H446.23V243.78H602.59ZM603,299v38.19H446.23V299Z"/><path d="M728.22,337.14l-52-60.47v60.47H617.89V188.62h58.35v57.92l53.47-57.92H798l-69.17,69.8L801,337.14Z"/></g></svg>`;
+const SVG_OCT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600"><g fill="#EDEDE8"><path d="M207,75.35C126.44,156.06,156.12,126.28,75.47,207V393.11L140.32,458l37.53-37.53L128.53,371.1c0-8,.8-36.29.8-44.45h53.06V272.8H129.33V229.27c60.49-60.39,37.09-37.07,99.88-99.82h6.24v76h53.86v-130C269,75.35,221.25,75.35,207,75.35Z"/><path d="M420.69,179.18l50,50.06v83c-21.82-9.1-7.67-3.17-67-27.76-41.2,101.54-30.29,74.73-39.14,96.56V75.59H310.69V524.65h53.85c67.15-165.77,21.12-52.19,68.65-169.49,47.45,19.64,27,11.17,91.34,37.86V206.9l-65.72-65.81Z"/><path d="M411.76,30.19l158,158.05V411.76l-158,158H188.24l-158-158V188.24l158.05-158H411.76M424.26,0H175.74l-8.85,8.84-158,158L0,175.74V424.26l8.84,8.85,158,158,8.85,8.84H424.26l8.85-8.84,158-158,8.84-8.85V175.74l-8.84-8.85-158-158L424.26,0Z"/></g></svg>`;
+const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('img '+src)); i.src=src; }); }
+
+const A = {};
+async function loadAll(){
+  const jobs = {
+    back:'assets/back_clean.png', smoke:'assets/smoke.png', word:svgUrl(SVG_WORD), oct:svgUrl(SVG_OCT),
+    Lb:P.left.img+'_body.png', Lr:P.left.img+'_rimred.png', Lc:P.left.img+'_rimcold.png',
+    Rb:P.right.img+'_body.png', Rr:P.right.img+'_rimred.png', Rc:P.right.img+'_rimcold.png',
+  };
+  for (let i=0;i<6;i++) jobs['g'+i]='assets/grain'+i+'.png';
+  await Promise.all(Object.entries(jobs).map(async ([k,v])=>{ A[k]=await loadImg(v); }));
+  for (const w of [500,600,700]) await document.fonts.load(`${w} 80px Teko`, 'ȚÉÀ’·ABC');
+  await document.fonts.ready;
+}
+
+/* ---------- outils ---------- */
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>{x=clamp(x);return 1-Math.pow(1-x,3);};
+const io=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;};
+const win=(t,a,b)=>ease((t-a)/(b-a));
+const lerp=(a,b,k)=>a+(b-a)*k;
+function rng(seed){ return ()=>{ seed=(seed*1664525+1013904223)>>>0; return seed/4294967296; }; }
+
+// texte avec interlettrage, compression horizontale si trop large, flou et échelle optionnels
+function text(str, x, y, {font, color=BONE, align='center', ls=0, maxW=0, alpha=1, shadow=0, blur=0, scale=1}){
+  if (alpha<=0.001) return 0;
+  ctx.save();
+  ctx.font=font; ctx.letterSpacing=ls+'px'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.globalAlpha*=alpha; ctx.fillStyle=color;
+  const w=ctx.measureText(str).width - ls;
+  const sx = (maxW && w>maxW) ? maxW/w : 1;
+  const x0 = align==='center' ? x - w*sx/2 : align==='right' ? x - w*sx : x;
+  ctx.translate(x, y); ctx.scale(scale, scale); ctx.translate(-x, -y);
+  ctx.translate(x0,y); ctx.scale(sx,1);
+  if (blur>0.05) ctx.filter=`blur(${blur.toFixed(2)}px)`;
+  if (shadow){ ctx.shadowColor='rgba(0,0,0,.85)'; ctx.shadowBlur=shadow; }
+  // Ț / Ș : la virgule souscrite de Teko est démesurée en grand corps → lettre de base + virgule redessinée
+  const base = str.replace(/Ț/g,'T').replace(/Ș/g,'S').replace(/ț/g,'t').replace(/ș/g,'s');
+  ctx.fillText(base,0,0);
+  if (base!==str){
+    const size = parseFloat(font.match(/(\d+(?:\.\d+)?)px/)[1]);
+    for (let i=0;i<str.length;i++){
+      if (!/[ȚȘțș]/.test(str[i])) continue;
+      const cx = ctx.measureText(base.slice(0,i)).width + (ctx.measureText(base[i]).width-ls)/2;
+      ctx.save(); ctx.font = font.replace(/(\d+(?:\.\d+)?)px/, (size*0.42).toFixed(1)+'px'); ctx.letterSpacing='0px'; ctx.textAlign='center';
+      ctx.fillText(',', cx, size*0.13);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+  return w*sx;
+}
+
+// allumage des projecteurs : deux scintillements puis montée
+function exposure(t){
+  const k=[[0,0],[0.16,0],[0.19,0.6],[0.25,0.6],[0.27,0.06],[0.36,0.06],[0.38,0.82],[0.44,0.82],[0.47,0.28],[0.55,0.34],[1.45,1]];
+  if (t>=k[k.length-1][0]) return 1;
+  for (let i=0;i<k.length-1;i++){ const [a,va]=k[i],[b,vb]=k[i+1]; if(t>=a&&t<b) return lerp(va,vb, i===k.length-2? io((t-a)/(b-a)) : (t-a)/(b-a)); }
+  return 0;
+}
+
+// poussière en suspension (positions fixes, dérive déterministe)
+const R = rng(20261205);
+const DUST = Array.from({length:70},()=>({x:R()*W, y:R()*H*0.9, r:0.7+R()*2.0, vy:-(5+R()*14), ph:R()*6.28, amp:6+R()*18, a:0.2+R()*0.6}));
+
+// braises qui montent (derrière les combattants) et quelques-unes devant, floues
+const EMB = Array.from({length:34},(_,i)=>({x:R()*W, y0:R()*H, sp:40+R()*70, r:1.2+R()*2.6, ph:R()*6.28, sw:10+R()*30, a:0.35+R()*0.5, front:i<5}));
+function drawEmbers(t, e, front){
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for (const m of EMB){
+    if (m.front!==front) continue;
+    let y = m.y0 - m.sp*t; y = ((y % (H+200)) + H+200) % (H+200) - 100;
+    const x = m.x + Math.sin(t*1.3+m.ph)*m.sw;
+    const life = clamp(1 - Math.abs(y/H - 0.55)*1.4);
+    const fl = 0.7 + 0.3*Math.sin(t*9+m.ph*3);
+    const r = front ? m.r*4 : m.r;
+    ctx.globalAlpha = e*m.a*life*fl*(front?0.35:0.8);
+    ctx.filter = front ? 'blur(5px)' : 'blur(0.6px)';
+    const g=ctx.createRadialGradient(x,y,0,x,y,r*2.2);
+    g.addColorStop(0,'rgba(255,190,120,1)'); g.addColorStop(0.4,'rgba(255,90,40,.8)'); g.addColorStop(1,'rgba(230,48,38,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r*2.2,0,6.283); ctx.fill();
+  }
+  ctx.restore();
+}
+const easeBack = x=>{ x=clamp(x); const c1=1.70158, c3=c1+1; return 1 + c3*Math.pow(x-1,3) + c1*Math.pow(x-1,2); };
+// reflet qui traverse une forme (logo) : dessin hors écran puis ajout lumineux
+const gl = document.createElement('canvas'); const glx = gl.getContext('2d');
+function glint(drawShape, x, y, w, h, p, strength=0.85){
+  if (p<=0 || p>=1) return;
+  gl.width = Math.ceil(w)+4; gl.height = Math.ceil(h)+4;
+  glx.clearRect(0,0,gl.width,gl.height); glx.globalCompositeOperation='source-over';
+  drawShape(glx, 2, 2);
+  glx.globalCompositeOperation='source-in';
+  const cx = -0.4*w + p*1.8*w, g = glx.createLinearGradient(cx-w*0.18, 0, cx+w*0.18, h*0.35);
+  g.addColorStop(0,'rgba(255,255,255,0)'); g.addColorStop(0.5,'rgba(255,255,255,1)'); g.addColorStop(1,'rgba(255,255,255,0)');
+  glx.fillStyle=g; glx.fillRect(0,0,gl.width,gl.height);
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=strength; ctx.drawImage(gl, x-2, y-2); ctx.restore();
+}
+// chiffres qui défilent jusqu'à leur valeur
+const countUp = (str,k)=> str.replace(/\d+/g, n=>String(Math.round(parseInt(n,10)*clamp(k))));
+// lettres qui apparaissent une à une
+function stagger(str, cx, y, {font, ls=0, color=BONE, t, t0, step=0.06, dur=0.35, rise=10, shadow=0}){
+  ctx.save(); ctx.font=font; ctx.letterSpacing=ls+'px';
+  const total = ctx.measureText(str).width - ls;
+  let x = cx - total/2;
+  for (let i=0;i<str.length;i++){
+    const ch=str[i], cw=ctx.measureText(ch).width;   // largeur + interlettrage
+    const k = win(t, t0+i*step, t0+i*step+dur);
+    if (k>0){ text(ch, x, y + (1-k)*rise, {font, color, align:'left', alpha:k, shadow}); }
+    x += cw;
+  }
+  ctx.restore();
+}
+
+/* ---------- une image ---------- */
+function drawFrame(t){
+  const D=P.duration;
+  const e = exposure(t);
+  const pulse = 0.9 + 0.1*Math.sin(t*2*Math.PI/3.2);
+  const cam = io(t/D);
+  const wx = Math.sin(t*23.1)*0.5 + Math.sin(t*7.7)*0.3, wy = Math.cos(t*19.3)*0.5;
+
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over'; ctx.filter='none';
+  ctx.fillStyle='#040405'; ctx.fillRect(0,0,W,H);
+  ctx.setTransform(1,0,0,1,wx,wy);
+
+  // ===== fond de la charte (texture + logo FW), travelling lent =====
+  ctx.save();
+  const bs = 1.0 + 0.035*cam;
+  ctx.translate(W/2,H*0.42); ctx.scale(bs,bs); ctx.translate(-W/2,-H*0.42);
+  ctx.filter='blur(1.6px)';               // léger flou du fond : séparation des plans
+  ctx.drawImage(A.back,0,0,W,H);
+  ctx.filter='none';
+  ctx.restore();
+  // noirs écrasés dans l'environnement
+  ctx.save();
+  const shade=ctx.createLinearGradient(0,0,0,H);
+  shade.addColorStop(0,'rgba(4,4,5,.30)'); shade.addColorStop(0.45,'rgba(4,4,5,.10)'); shade.addColorStop(1,'rgba(4,4,5,.55)');
+  ctx.fillStyle=shade; ctx.fillRect(-10,-10,W+20,H+20);
+  ctx.restore();
+
+  drawEmbers(t, e, false);
+
+  // ===== combattants : travelling avant + mise au point =====
+  // placement de chaque combattant (calculé par integrate.py : x, haut, largeur dessinée)
+  const push = 1 + 0.06*cam;
+  const focus = 10*(1-win(t,0.45,2.0));
+  const rimIn = win(t,1.0,1.9);
+  const figs=[
+    {b:A.Rb,r:A.Rr,c:A.Rc,x:P.right.x, top:P.right.top, fw:P.right.w, fh:P.right.w*A.Rb.height/A.Rb.width, ax:W},
+    {b:A.Lb,r:A.Lr,c:A.Lc,x:P.left.x,  top:P.left.top,  fw:P.left.w,  fh:P.left.w*A.Lb.height/A.Lb.width,  ax:0},
+  ];
+  for (const f of figs){
+    ctx.save();
+    const fw=f.fw, fh=f.fh, py = f.top + fh*0.28;
+    ctx.translate(f.ax,py); ctx.scale(push,push); ctx.translate(-f.ax,-py);
+    ctx.translate(0, -12*cam);
+    ctx.filter = (focus>0.05?`blur(${focus.toFixed(2)}px) `:'') + 'contrast(106%)';
+    ctx.shadowColor='rgba(0,0,0,0.55)'; ctx.shadowBlur=70; ctx.shadowOffsetY=18;
+    ctx.drawImage(f.b, f.x, f.top, fw, fh);
+    ctx.shadowColor='transparent';
+    ctx.globalCompositeOperation='lighter';
+    ctx.globalAlpha=0.9;
+    ctx.drawImage(f.c, f.x, f.top, fw, fh);
+    const ign = rimIn*(1 + 0.35*Math.exp(-Math.pow((t-1.55)/0.18,2)));
+    ctx.globalAlpha=clamp(ign*(0.8+0.2*pulse))*0.66;
+    ctx.drawImage(f.r, f.x, f.top, fw, fh);
+    ctx.filter=`blur(${(26+focus).toFixed(1)}px)`; ctx.globalAlpha=0.18*rimIn*pulse;
+    ctx.drawImage(f.r, f.x, f.top, fw, fh);
+    ctx.restore();
+  }
+
+  // ===== poussière + brume devant =====
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for (const d of DUST){
+    let y = d.y + d.vy*t; y = ((y % (H*0.9)) + H*0.9) % (H*0.9);
+    const x = d.x + Math.sin(t*0.6+d.ph)*d.amp + t*3;
+    ctx.globalAlpha = e*d.a*0.35;
+    ctx.fillStyle='#fff6ea'; ctx.beginPath(); ctx.arc(x,y,d.r,0,6.283); ctx.fill();
+  }
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha=0.08*e;
+  ctx.translate(W,0); ctx.scale(-1.45,1.45);
+  ctx.drawImage(A.smoke, -260 + t*14, 520 - t*3);
+  ctx.restore();
+
+  // allumage : la scène sort du noir (voile noir, pas de transparence)
+  if (e<1){ ctx.save(); ctx.fillStyle=`rgba(4,4,5,${(1-e).toFixed(3)})`; ctx.fillRect(-10,-10,W+20,H+20); ctx.restore(); }
+
+  drawEmbers(t, e, true);
+
+  // dégradé sombre sous le bloc texte
+  ctx.save();
+  const gb=ctx.createLinearGradient(0,940,0,1640);
+  gb.addColorStop(0,'rgba(4,4,5,0)'); gb.addColorStop(0.4,'rgba(4,4,5,.55)'); gb.addColorStop(1,'rgba(4,4,5,.88)');
+  ctx.fillStyle=gb; ctx.fillRect(-10,940,W+20,H);
+  ctx.restore();
+
+  const sh = {shadowC:'rgba(0,0,0,.6)'};
+
+  // ===== en-tête : logo Fight Week (blanc), puis événement · lieu · date =====
+  const oh=62, ow=oh, wh=50, ww=wh*801/337.14, gap=18, tot=ow+gap+ww, bx=W/2-tot/2, by=238;
+  const kO = clamp((t-1.25)/0.55), kW = win(t,1.45,2.2);
+  if (kO>0){
+    ctx.save(); ctx.globalAlpha=clamp(kO*2);
+    const sc = lerp(0.35,1,easeBack(kO)), rot = (1-ease(kO))*-0.5;
+    ctx.translate(bx+ow/2, by+oh/2); ctx.rotate(rot); ctx.scale(sc,sc);
+    ctx.drawImage(A.oct, -ow/2, -oh/2, ow, oh);
+    ctx.restore();
+  }
+  if (kW>0){
+    ctx.save(); ctx.globalAlpha=kW;
+    ctx.beginPath(); ctx.rect(bx+ow+gap-4, by-10, (ww+8)*kW, oh+20); ctx.clip();
+    ctx.drawImage(A.word, bx+ow+gap + (1-kW)*24, by+(oh-wh)/2, ww, wh);
+    ctx.restore();
+  }
+  const drawLogo=(c,x,y)=>{ c.drawImage(A.oct,x,y,ow,oh); c.drawImage(A.word,x+ow+gap,y+(oh-wh)/2,ww,wh); };
+  glint(drawLogo, bx, by, tot, oh, (t-5.0)/0.9);
+  glint(drawLogo, bx, by, tot, oh, (t-8.4)/0.9, 0.6);
+
+  // événement : balayage gauche → droite + interlettrage qui se resserre
+  const aEv = win(t,1.55,2.5);
+  if (aEv>0){
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 300, lerp(W*0.15, W, aEv), 70); ctx.clip();
+    text(P.event, W/2, 352, {font:F(600,46), ls:lerp(16,5,aEv), maxW:960, alpha:clamp(aEv*1.5), shadow:16});
+    ctx.restore();
+  }
+  stagger(P.date, W/2, 392, {font:F(500,32), ls:9, color:GOLD, t, t0:2.0, step:0.035, dur:0.3, rise:8, shadow:12});
+
+  // ===== noms (sans prénoms) + VERSUS exactement à mi-distance =====
+  const n1 = win(t,2.2,3.3), n2 = win(t,2.6,3.7);
+  const drift = -10*io(clamp((t-3.5)/6.5));                  // le bloc remonte très lentement
+  const nameF = F(700,152), yA=1092+drift, yB=1240+drift;
+  text(P.left.last,  W/2, yA, {font:nameF, ls:6, maxW:960, alpha:n1, blur:12*(1-n1), scale:lerp(1.07,1,n1), shadow:30});
+  text(P.right.last, W/2, yB, {font:nameF, ls:6, maxW:960, alpha:n2, blur:12*(1-n2), scale:lerp(1.07,1,n2), shadow:30});
+  // mi-distance : bas des lettres du 1er nom (sans la virgule du Ț) ↔ haut des lettres du 2e
+  ctx.save(); ctx.font=nameF; ctx.letterSpacing='6px';
+  const baseA = P.left.last.replace(/[ȚȘ]/g, c=>c==='Ț'?'T':'S');
+  const botA = yA + ctx.measureText(baseA).actualBoundingBoxDescent;
+  const topB = yB - ctx.measureText(P.right.last).actualBoundingBoxAscent;
+  ctx.font=F(500,28); ctx.letterSpacing='18px';
+  const mv = ctx.measureText('VERSUS');
+  ctx.restore();
+  const vmid = (botA+topB)/2, vbase = vmid + (mv.actualBoundingBoxAscent - mv.actualBoundingBoxDescent)/2;
+
+  const flare = Math.exp(-Math.pow((t-2.72)/0.22,2)) + 0.12*win(t,2.6,3.4)*pulse;
+  if (flare>0.01){
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const fg=ctx.createLinearGradient(0,0,W,0);
+    fg.addColorStop(0,'rgba(255,196,0,0)'); fg.addColorStop(0.5,'rgba(255,196,0,1)'); fg.addColorStop(1,'rgba(255,196,0,0)');
+    ctx.filter='blur(14px)'; ctx.globalAlpha=0.45*flare; ctx.fillStyle=fg; ctx.fillRect(-60,vmid-20,W+120,40);
+    ctx.filter='blur(2px)'; ctx.globalAlpha=0.85*flare;
+    const fc=ctx.createLinearGradient(0,0,W,0);
+    fc.addColorStop(0,'rgba(255,230,160,0)'); fc.addColorStop(0.5,'rgba(255,248,225,1)'); fc.addColorStop(1,'rgba(255,230,160,0)');
+    ctx.fillStyle=fc; ctx.fillRect(-60,vmid-1.5,W+120,3);
+    ctx.restore();
+  }
+  stagger('VERSUS', W/2, vbase, {font:F(500,28), ls:18, color:'rgba(237,237,232,.92)', t, t0:2.6, step:0.07, dur:0.3, rise:0, shadow:10});
+
+  // reflet sur les noms
+  const sw=(t-6.6)/1.0;
+  if (sw>0 && sw<1){
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const sx=-200+sw*(W+400), g=ctx.createLinearGradient(sx-130,0,sx+130,0);
+    g.addColorStop(0,'rgba(255,255,255,0)'); g.addColorStop(0.5,'rgba(255,255,255,.14)'); g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,985+drift,W,280);
+    ctx.restore();
+  }
+
+  // ===== palmarès : les chiffres défilent, le filet pousse depuis le centre =====
+  const aR = win(t,3.3,3.9), kC = win(t,3.3,4.5), aS = win(t,3.7,4.3), ry=1300;
+  ctx.save(); ctx.globalAlpha=aR; ctx.fillStyle=GOLD; ctx.fillRect(W/2-1, ry-30+29*(1-aR), 2, 58*aR); ctx.restore();
+  text(countUp(P.left.rec,kC),  300, ry, {font:F(600,42), ls:2, maxW:400, alpha:aR, shadow:10});
+  text(countUp(P.right.rec,kC), 780, ry, {font:F(600,42), ls:2, maxW:400, alpha:aR, shadow:10});
+  text(P.left.sub,  300, ry+30+(1-aS)*8, {font:F(500,25), ls:4, color:'rgba(237,237,232,.72)', maxW:400, alpha:aS});
+  text(P.right.sub, 780, ry+30+(1-aS)*8, {font:F(500,25), ls:4, color:'rgba(237,237,232,.72)', maxW:400, alpha:aS});
+
+  // ===== catégorie (en anglais) dans la barre dorée, avec un reflet qui passe =====
+  const aB = win(t,3.8,4.5), bt=1362, bh=56;
+  if (aB>0){
+    const bw = W*aB;
+    ctx.save(); ctx.fillStyle=GOLD; ctx.fillRect(W/2-bw/2, bt, bw, bh); ctx.restore();
+    const aT = clamp((aB-0.45)/0.55);
+    text(P.division, W/2, bt+42, {font:F(600,38), ls:lerp(16,6,aT), color:NAVY, maxW:980, alpha:aT});
+    for (const [t0,str] of [[5.8,0.55],[9.0,0.4]]){
+      const p=(t-t0)/0.8;
+      if (p>0 && p<1){
+        ctx.save(); ctx.beginPath(); ctx.rect(0,bt,W,bh); ctx.clip(); ctx.globalCompositeOperation='lighter';
+        const gx=-300+p*(W+600), g=ctx.createLinearGradient(gx-160,0,gx+160,0);
+        g.addColorStop(0,'rgba(255,255,255,0)'); g.addColorStop(0.5,`rgba(255,255,255,${str})`); g.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=g; ctx.fillRect(0,bt,W,bh); ctx.restore();
+      }
+    }
+  }
+
+  // ===== finitions : vignette, grain =====
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.save();
+  const vg=ctx.createRadialGradient(W/2,H*0.45,H*0.30,W/2,H*0.5,H*0.78);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.62)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='overlay'; ctx.globalAlpha=0.18;
+  const fi=Math.floor(t*24), gi=A['g'+(fi%6)], gx=(fi*137)%540, gy=(fi*251)%540;
+  for(let y=-gy;y<H;y+=540) for(let x=-gx;x<W;x+=540) ctx.drawImage(gi,x,y);
+  ctx.restore();
+}
+
+window.ready = loadAll().then(()=>{ drawFrame(window.START_T ?? 8); return true; });
+window.drawFrame = drawFrame;
+</script>
+</body>
+</html>

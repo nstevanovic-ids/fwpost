@@ -1,0 +1,13 @@
+{
+  "name": "fwpost",
+  "version": "1.0.0",
+  "description": "Post vidéo d'annonce de combat Fight Week",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fontsource/teko": "^5.3.0"
+  },
+  "private": true
+}
