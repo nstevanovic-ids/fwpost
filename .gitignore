@@ -2,3 +2,7 @@ node_modules/
 work/
 out/
 __pycache__/
+
+# reels : modèle Whisper et polices générés par setup.sh
+reels/models/
+reels/fonts/

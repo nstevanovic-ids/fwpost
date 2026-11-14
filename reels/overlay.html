@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>FW — calques reel podcast</title>
+<link rel="stylesheet" href="../node_modules/@fontsource/teko/500.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/teko/600.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/teko/700.css">
+<style>html,body{margin:0;background:transparent}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="cv" width="1080" height="1920"></canvas>
+<script>
+const W=1080, H=1920;
+const BONE='#EDEDE8', GOLD='#FFC400', RED='#E63026', NAVY='#06121f', INK='#050506';
+const COL={bone:BONE, gold:GOLD, red:RED};
+const SVG_WORD=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 801 337.14"><g fill="#EDEDE8"><path d="M57.35,40.67V61.11H146V96.77H57.35V148.9H0V2.92H152V40.67Z"/><path d="M221.89,2.92v146H164.53V2.92Z"/><path d="M334.5,152c-49.43,0-100.1-17.52-100.1-76.12,0-58.39,48.790-75.91,97-75.91C376,0,415.2,15.64,424.17,51.72h-58.6c-5.42-7.930-14.6-14.390-34.2-14.390-26.9,0-39,14.390-39,38.580,0,24.4,16.680,38.790,42.750,38.790,22.730,0,31.910-10,34.620-16.890H327.2V62.150H427.510C432.510,125.130,393.1,152,334.5,152Z"/><path d="M620.61,2.92v146H563.26V96.56H498V148.9H440.64V2.92H498V55.06h65.27V2.92Z"/><path d="M801,40.67H745.73V148.9H688.39V40.67H633.12V2.92H801Z"/><path d="M266.07,188.62,217.48,337.14H155.31L133,255.24l-22.27,81.9H48.59L0,188.62H60.47l24.19,88.9,24.19-88.9h48.37l24.19,88.9,24.19-88.9Z"/><path d="M431.47,226.81H274.57V188.62h156.9Zm0,53.26H274.57V243.78h156.9Zm-.1,18.88v38.19H274.57V299Z"/><path d="M602.59,226.81H446.23V188.62H602.59Zm0,53.26H446.23V243.78H602.59ZM603,299v38.19H446.23V299Z"/><path d="M728.22,337.14l-52-60.47v60.47H617.89V188.62h58.35v57.92l53.47-57.92H798l-69.17,69.8L801,337.14Z"/></g></svg>`;
+const SVG_OCT=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600"><g fill="#EDEDE8"><path d="M207,75.35C126.44,156.06,156.12,126.28,75.47,207V393.11L140.32,458l37.53-37.53L128.53,371.1c0-8,.8-36.29.8-44.45h53.06V272.8H129.33V229.27c60.49-60.39,37.09-37.070,99.88-99.82h6.24v76h53.86v-130C269,75.35,221.25,75.35,207,75.35Z"/><path d="M420.69,179.18l50,50.06v83c-21.82-9.1-7.67-3.17-67-27.76-41.2,101.54-30.29,74.73-39.14,96.56V75.59H310.69V524.65h53.85c67.15-165.77,21.12-52.19,68.65-169.49,47.45,19.64,27,11.17,91.34,37.86V206.9l-65.72-65.81Z"/><path d="M411.76,30.19l158,158.050V411.76l-158,158H188.24l-158-158V188.24l158.050-158H411.76M424.26,0H175.74l-8.85,8.84-158,158L0,175.74V424.26l8.84,8.85,158,158,8.85,8.84H424.26l8.85-8.84,158-158,8.84-8.85V175.74l-8.84-8.85-158-158L424.26,0Z"/></g></svg>`;
+const svgUrl=s=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const loadImg=src=>new Promise((res,rej)=>{const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('img '+src)); i.src=src;});
+const A={};
+async function loadAll(){
+  A.back=await loadImg('../assets/back_clean.png'); A.word=await loadImg(svgUrl(SVG_WORD)); A.oct=await loadImg(svgUrl(SVG_OCT));
+  for (const w of [500,600,700]) await document.fonts.load(`${w} 80px Teko`,'ÉÀÇ’·ABC');
+  await document.fonts.ready;
+}
+
+function logo(cx, y, oh){
+  const ow=oh, wh=oh*50/62, ww=wh*801/337.14, gap=oh*18/62, tot=ow+gap+ww, x=cx-tot/2;
+  ctx.drawImage(A.oct,x,y,ow,oh); ctx.drawImage(A.word,x+ow+gap,y+(oh-wh)/2,ww,wh);
+}
+// ligne de texte multicolore centrée : runs = [{t, c}]
+function runsWidth(runs, font, ls){ ctx.font=font; ctx.letterSpacing=ls+'px'; return runs.reduce((s,r)=>s+ctx.measureText(r.t).width,0)-ls; }
+function drawRuns(runs, cx, y, font, ls=0, shadow=18){
+  ctx.save(); ctx.font=font; ctx.letterSpacing=ls+'px'; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+  let x=cx-runsWidth(runs,font,ls)/2;
+  ctx.shadowColor='rgba(0,0,0,.75)'; ctx.shadowBlur=shadow; ctx.shadowOffsetY=4;
+  for (const r of runs){ ctx.fillStyle=COL[r.c]||BONE; ctx.fillText(r.t,x,y); x+=ctx.measureText(r.t).width; }
+  ctx.restore();
+}
+function spaced(str, cx, y, font, color, ls){
+  ctx.save(); ctx.font=font; ctx.letterSpacing=ls+'px'; ctx.fillStyle=color; ctx.textAlign='left';
+  const w=ctx.measureText(str).width-ls; ctx.fillText(str,cx-w/2,y); ctx.restore();
+}
+
+function drawBg(C){
+  // fond charte : texture rouge / bleu-gris, assombrie, légèrement floutée
+  ctx.save(); ctx.filter='blur(3px)'; ctx.drawImage(A.back,-20,-20,W+40,H+40); ctx.restore();
+  ctx.fillStyle='rgba(4,4,5,.50)'; ctx.fillRect(0,0,W,H);
+  const vg=ctx.createRadialGradient(W/2,H*0.42,200,W/2,H*0.45,1250);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.72)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+  // en-tête : logo blanc + étiquette or
+  logo(W/2, C.logoY ?? 236, 54);
+  spaced(C.label, W/2, (C.logoY ?? 236)+54+50, '600 40px Teko', GOLD, 7);
+
+  // accroche : lignes multicolores, taille ajustée à la largeur
+  const lines=C.hook; let size=C.hookSize||128;
+  const maxW=C.hookMaxW||990;
+  for (const L of lines){ while (runsWidth(L,`700 ${size}px Teko`,1)>maxW) size-=2; }
+  const lh=size*0.86; let y=C.hookY ?? 446;
+  for (const L of lines){ drawRuns(L, W/2, y+size*0.72, `700 ${size}px Teko`, 1); y+=lh; }
+
+  // emplacements vidéo : fond noir, filet rouge entre les deux plans
+  for (const t of C.tiles){ const [x,yy,w,h]=t.rect; ctx.fillStyle=INK; ctx.fillRect(x,yy,w,h); }
+  if (C.tiles.length===2){
+    const a=C.tiles[0].rect, b=C.tiles[1].rect, top=a[1]+a[3], gap=b[1]-top;
+    ctx.fillStyle=RED; ctx.fillRect(0,top,W,gap);
+  } else {
+    const r=C.tiles[0].rect; ctx.fillStyle=RED; ctx.fillRect(r[0],r[1]-6,r[2],6); ctx.fillRect(r[0],r[1]+r[3],r[2],6);
+  }
+}
+
+function drawEnd(C){
+  const r0=C.tiles[0].rect, r1=C.tiles[C.tiles.length-1].rect, top=r0[1], bot=r1[1]+r1[3];
+  ctx.fillStyle='rgba(4,4,5,.84)'; ctx.fillRect(0,top,W,bot-top);
+  const cy=(top+bot)/2;
+  ctx.drawImage(A.oct, W/2-60, cy-250, 120, 120);
+  drawRuns([{t:"L'ÉPISODE COMPLET",c:'bone'}], W/2, cy+10, '700 118px Teko', 1, 0);
+  drawRuns([{t:'SUR YOUTUBE',c:'red'}], W/2, cy+118, '700 118px Teko', 1, 0);
+  spaced('@FIGHTWEEK_MMA', W/2, cy+196, '600 50px Teko', GOLD, 6);
+}
+
+window.renderLayer = async (layer)=>{
+  const C=window.CFG; if(!A.back) await loadAll();
+  ctx.clearRect(0,0,W,H);
+  if (layer==='bg') drawBg(C); else if (layer==='end') drawEnd(C);
+  return true;
+};
+</script>
+</body>
+</html>
