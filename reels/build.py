@@ -11,6 +11,7 @@ Config (voir examples/) :
   cuts       [[début, fin, caméra, (zoom)], …] en secondes de la source ; une ligne = un plan (jump cut)
              bornes à placer dans les silences (vérifier avec envcheck.py), snap: false conseillé
   edits      corrections de sous-titres [début_du_mot, nb_de_mots, "remplacement"] ("" = supprimer)
+  coverAt    (option) instant de la source utilisé pour la 1re image = couverture (ex. éviter un clignement)
   tile/subY/subSize/maxChars/punch/tail/wordShift : mise en page et réglages (valeurs par défaut validées)
 """
 import json, os, re, subprocess, sys
@@ -67,11 +68,14 @@ for w in allw:
     else:
         merged.append(dict(w, w=t))
 # corrections manuelles : [début_du_mot, nb_de_mots, "remplacement"]
-for t0, nw, rep in C.get('edits', []):
+for ed in C.get('edits', []):   # [début, nb_mots, remplacement, (nouveau début)]
+    t0, nw, rep = ed[:3]
     idx = min(range(len(merged)), key=lambda i: abs(merged[i]['start'] - t0))
     if abs(merged[idx]['start'] - t0) > 0.06: raise SystemExit(f'edit introuvable à {t0}')
     end = merged[idx + nw - 1]['end']
-    merged[idx:idx + nw] = [dict(merged[idx], w=rep, end=end)] if rep else []
+    new = dict(merged[idx], w=rep, end=end)
+    if len(ed) > 3: new['start'] = ed[3]; new['end'] = max(end, ed[3] + 0.05)
+    merged[idx:idx + nw] = [new] if rep else []
 allw = merged
 SH = C.get('wordShift', 0.10)   # Whisper place les mots un peu en avance
 def in_cut(m):
@@ -175,7 +179,19 @@ for i, c in enumerate(CUTS):
     fg.append(f"[{k}:a]atrim=0:{dur:.3f},asetpts=PTS-STARTPTS,afade=t=in:d=0.012,afade=t=out:st={max(0, dur - 0.015):.3f}:d=0.015[a{i}]")
 n = len(CUTS)
 fg.append(''.join(f'[v{i}][a{i}]' for i in range(n)) + f"concat=n={n}:v=1:a=1[catv][cata]")
-fg.append(f"[catv]tpad=stop_mode=clone:stop_duration={TAIL}[cam]")
+fg.append(f"[catv]tpad=stop_mode=clone:stop_duration={TAIL}[cam0]")
+# couverture : 1re image prise à un autre instant de la source (ex. éviter un clignement d'yeux)
+if C.get('coverAt') is not None:
+    k = len(CUTS) + 2
+    x, y, w, h = C['cams'][CUTS[0][2]]
+    tr = TW / TH
+    cw, ch_ = (round(h * tr), h) if w / h > tr else (w, round(w / tr))
+    inputs += ['-ss', f"{C['coverAt']}", '-t', '0.05', '-i', C['src']]
+    fg.append(f"[{k}:v]fps=30,trim=end_frame=1,crop={cw}:{ch_}:{x + (w - cw) // 2}:{y + (h - ch_) // 2},scale={TW}:{TH}:flags=lanczos,setsar=1,"
+              f"tpad=stop_mode=clone:stop_duration=0.1[cov]")
+    fg.append("[cam0][cov]overlay=0:0:enable='lt(t,0.034)':eof_action=pass[cam]")
+else:
+    fg.append("[cam0]null[cam]")
 fg.append("[0:v]scale=1080:1920,setsar=1,format=yuv420p[bg]")
 fg.append(f"[bg][cam]overlay={TX}:{TY}:shortest=1[c1]")
 fg.append(f"[c1]ass={OUT}/subs.ass:fontsdir={HERE}/fonts[c2]")

@@ -1,0 +1,46 @@
+{
+  "src": "work/gane/src.mp4",
+  "words": "work/gane/words_all_2026-11-16_gane-hokit_reel1_eye-poke.json",
+  "out": "out/2026-11-16_reel1_eye-poke",
+  "label": "PODCAST · UFC 334",
+  "hook": [
+    [{"t": "EYE POKE ", "c": "red"}, {"t": "IGNORÉ :", "c": "bone"}],
+    [{"t": "LA FAUTE AUX ", "c": "bone"}, {"t": "LUNETTES", "c": "gold"}, {"t": " ?", "c": "bone"}]
+  ],
+  "cams": {"L": [18, 71, 604, 458], "R": [657, 71, 604, 458]},
+  "faceY": {"L": 0.42, "R": 0.45},
+  "cuts": [
+    [374.78, 376.12, "R"],
+    [377.95, 379.18, "R"],
+    [379.9, 383.1, "L"],
+    [429.45, 431.35, "R"],
+    [432.45, 438.17, "R"],
+    [439.3, 441.17, "R"],
+    [442.3, 442.73, "R"],
+    [444.3, 445.31, "R"],
+    [445.44, 449.97, "R"],
+    [580.45, 588.0, "R"],
+    [588.05, 589.33, "L"]
+  ],
+  "snap": false,
+  "edits": [
+    [375.57, 1, "eye poke,"],
+    [376.01, 1, "c'est certain."],
+    [377.95, 2, "Intentionnel ou pas ?"],
+    [382.69, 1, "doute."],
+    [439.3, 2, ""],
+    [442.45, 1, "vidéos,"],
+    [446.85, 1, "l'eye poke,"],
+    [447.19, 1, ""],
+    [584.32, 1, "eye poke,"],
+    [585.28, 1, "rentré"]
+  ],
+  "coverAt": 374.6,
+  "wordShift": 0,
+  "tile": [0, 630, 1080, 810],
+  "subY": 1330,
+  "subSize": 116,
+  "maxChars": 15,
+  "tail": 1.8,
+  "punch": 1.12
+}
