@@ -1,0 +1,35 @@
+{
+  "src": "work/baki/src.mp4",
+  "words": "work/baki/words_all_2026-11-18_zebo-baki2_reel_baki.json",
+  "out": "out/2026-11-18_reel_baki-genou",
+  "label": "PODCAST MIROIR · ARES 45",
+  "hook": [
+    [{"t": "BAKI", "c": "red"}, {"t": " A DOMINÉ 3 ROUNDS", "c": "bone"}],
+    [{"t": "SUR UN SEUL ", "c": "bone"}, {"t": "GENOU", "c": "gold"}]
+  ],
+  "cams": {"L": [18, 71, 604, 458], "R": [657, 71, 604, 458]},
+  "faceY": {"L": 0.42, "R": 0.45},
+  "cuts": [
+    [86.45, 95.64, "L"],
+    [95.64, 102.12, "L"],
+    [104.18, 111.09, "L"],
+    [111.09, 116.0, "L"],
+    [116.8, 118.45, "L"],
+    [120.04, 134.15, "L"]
+  ],
+  "snap": false,
+  "edits": [
+    [94.45, 1, "croisé"],
+    [94.74, 1, "rompu,"],
+    [95.25, 1, "gars ?"],
+    [120.04, 2, ""],
+    [120.5, 1, "Mais", 120.07]
+  ],
+  "wordShift": 0,
+  "tile": [0, 630, 1080, 810],
+  "subY": 1330,
+  "subSize": 116,
+  "maxChars": 15,
+  "tail": 1.8,
+  "punch": 1.12
+}
