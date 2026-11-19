@@ -16,6 +16,7 @@ Première version validée : podcast Habirora (14/11/2026), voir `examples/`.
 | 1440 – 1920 | fond seul (légende Insta par-dessus) |
 
 - La 1re image du reel **est** la couverture : accroche + plan, pas de sous-titre, jamais de fondu au noir.
+- Encodage sans images B (`-bf 0`) : l'image démarre à 0 s avec le son. Avec des images B, la vidéo commence 2 images plus tard (edit list) et beaucoup de lecteurs montrent un flash au début.
 - Une caméra à la fois (L = Niko, R = Aytac dans l'habillage OBS actuel), coupes franches aux changements de parole.
 - Jump cuts dans les silences ; à chaque coupe sur la même caméra, zoom alterné 100 % / 112 %.
 - Carte de fin 1,8 s : « L'ÉPISODE COMPLET SUR YOUTUBE · @FIGHTWEEK_MMA ».
@@ -49,7 +50,7 @@ automatiquement) et écorche les noms (Habirora, Dafrawy, Thad Jean…) → corr
 Toujours relire `sous-titres.txt` et regarder quelques images avant de livrer.
 Les horaires Whisper peuvent varier de ± 0,4 s : se fier à `envcheck.py` pour les coupes, à `recut_words.py` pour le texte ;
 un mot mal placé se recale avec un 4e champ dans `edits` (nouveau début). Si la 1re image tombe sur un clignement d'yeux,
-`coverAt` prend la couverture à un autre instant de la source.
+`coverAt` prend couverture.jpg à un autre instant de la source (la vidéo n'est pas modifiée : à poser comme couverture personnalisée sur Insta/TikTok/Shorts).
 
 ## Livrables par reel
 

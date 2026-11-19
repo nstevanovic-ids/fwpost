@@ -11,7 +11,7 @@ Config (voir examples/) :
   cuts       [[début, fin, caméra, (zoom)], …] en secondes de la source ; une ligne = un plan (jump cut)
              bornes à placer dans les silences (vérifier avec envcheck.py), snap: false conseillé
   edits      corrections de sous-titres [début_du_mot, nb_de_mots, "remplacement"] ("" = supprimer)
-  coverAt    (option) instant de la source utilisé pour la 1re image = couverture (ex. éviter un clignement)
+  coverAt    (option) instant de la source utilisé pour couverture.jpg (ex. éviter un clignement) ; la vidéo, elle, démarre sur sa vraie 1re image
   tile/subY/subSize/maxChars/punch/tail/wordShift : mise en page et réglages (valeurs par défaut validées)
 """
 import json, os, re, subprocess, sys
@@ -180,18 +180,8 @@ for i, c in enumerate(CUTS):
 n = len(CUTS)
 fg.append(''.join(f'[v{i}][a{i}]' for i in range(n)) + f"concat=n={n}:v=1:a=1[catv][cata]")
 fg.append(f"[catv]tpad=stop_mode=clone:stop_duration={TAIL}[cam0]")
-# couverture : 1re image prise à un autre instant de la source (ex. éviter un clignement d'yeux)
-if C.get('coverAt') is not None:
-    k = len(CUTS) + 2
-    x, y, w, h = C['cams'][CUTS[0][2]]
-    tr = TW / TH
-    cw, ch_ = (round(h * tr), h) if w / h > tr else (w, round(w / tr))
-    inputs += ['-ss', f"{C['coverAt']}", '-t', '0.05', '-i', C['src']]
-    fg.append(f"[{k}:v]fps=30,trim=end_frame=1,crop={cw}:{ch_}:{x + (w - cw) // 2}:{y + (h - ch_) // 2},scale={TW}:{TH}:flags=lanczos,setsar=1,"
-              f"tpad=stop_mode=clone:stop_duration=0.1[cov]")
-    fg.append("[cam0][cov]overlay=0:0:enable='lt(t,0.034)':eof_action=pass[cam]")
-else:
-    fg.append("[cam0]null[cam]")
+# la vidéo démarre sur sa vraie 1re image : coverAt ne sert qu'à couverture.jpg (sinon flash de 2 images au début)
+fg.append("[cam0]null[cam]")
 fg.append("[0:v]scale=1080:1920,setsar=1,format=yuv420p[bg]")
 fg.append(f"[bg][cam]overlay={TX}:{TY}:shortest=1[c1]")
 fg.append(f"[c1]ass={OUT}/subs.ass:fontsdir={HERE}/fonts[c2]")
@@ -203,9 +193,20 @@ cmd = ['ffmpeg', '-v', 'error', '-y',
        '-loop', '1', '-framerate', '30', '-t', f'{T}', '-i', f'{OUT}/bg.png',
        '-loop', '1', '-framerate', '30', '-t', f'{T}', '-i', f'{OUT}/end.png'] + inputs + [
        '-filter_complex', ';'.join(fg), '-map', '[vout]', '-map', '[aout]', '-t', f'{T:.3f}',
-       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-maxrate', '12M', '-bufsize', '24M', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-r', '30',
+       # -bf 0 : pas d'images B, donc pas de décalage de 2 images (edit list) que beaucoup de lecteurs affichent comme un flash au début
+       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-bf', '0', '-maxrate', '12M', '-bufsize', '24M', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-r', '30',
        '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', f'{OUT}/reel.mp4']
 subprocess.run(cmd, check=True)
-subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', f'{OUT}/reel.mp4', '-frames:v', '1', f'{OUT}/couverture.png'], check=True)
+if C.get('coverAt') is not None:
+    # couverture prise à un autre instant de la source (ex. éviter un clignement d'yeux), sans toucher à la vidéo
+    x, y, w, h = C['cams'][CUTS[0][2]]
+    tr = TW / TH
+    cw, ch_ = (round(h * tr), h) if w / h > tr else (w, round(w / tr))
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', f'{OUT}/bg.png', '-ss', f"{C['coverAt']}", '-i', C['src'], '-filter_complex',
+                    f"[1:v]trim=end_frame=1,crop={cw}:{ch_}:{x + (w - cw) // 2}:{y + (h - ch_) // 2},scale={TW}:{TH}:flags=lanczos,setsar=1[cov];"
+                    f"[0:v]scale=1080:1920,setsar=1[bg];[bg][cov]overlay={TX}:{TY},format=rgb24",
+                    '-frames:v', '1', f'{OUT}/couverture.png'], check=True)
+else:
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', f'{OUT}/reel.mp4', '-frames:v', '1', f'{OUT}/couverture.png'], check=True)
 subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', f'{OUT}/couverture.png', '-q:v', '2', f'{OUT}/couverture.jpg'], check=True)
 print('ok', OUT, f'{T:.1f}s', len(chunks), 'blocs de sous-titres')
